@@ -1,0 +1,74 @@
+# компиляторы
+CC            = mpicxx
+CC_CUDA       = nvcc
+CFLAGSDEBUG   = -g -Wall -pedantic #-Werror
+CFLAGSRELEASE =
+CFLAGSINCLUDE = $(addprefix -I, $(INCLUDE_DIR))
+CFLAGSLIB     = $(addprefix -L, $(LIB_DIR)) $(addprefix -l, $(LIBMODULES))
+CFLAGS        = $(CFLAGSDEBUG) $(CFLAGSINCLUDE) $(CFLAGSLIB) -openmp
+CFLAGS_CUDA   = $(CFLAGSINCLUDE) $(CFLAGSLIB)
+
+FILE        = file74
+ARGUMENTS   = -i ./test/samples/$(FILE) -o picture/pic_$(FILE)/pic-$(NUMBER_PROC)-$(DATE) -a 1500 -s 500 -QWER ah
+NODE        = 1
+NUMBER_PROC = 8
+QUEUE       = test
+TIME        = 15:00
+DATE        = `date '+%H:%M:%S'`
+OUTPUT      = result/result_$(FILE)/$(NUMBER_PROC)-$(DATE)
+
+# =============================================================================
+
+# абстрактные цели
+.PHONY: print clean run
+
+# пути поиска шаблонов
+vpath %.h   $(INCLUDE_DIR)
+vpath %.cpp $(SRC_DIR)
+vpath %.cu  $(SRC_DIR)
+vpath %.o   $(OBJ_NOW)
+
+# главная цель 
+all:  $(OBJMODULES)
+	$(CC) $(CFLAGS) $^ -o $(BIN_NOW)/$(PROG)
+
+run:
+	sbatch -N $(NODE) -n $(NUMBER_PROC) -t $(TIME) -p $(QUEUE) -o $(OUTPUT) impi $(BIN_NOW)/$(PROG) $(ARGUMENTS)
+
+# отладочная печать 
+print:
+	@echo $(NODE)
+	@echo $(NUMBER_PROC)
+	@echo $(TIME)
+	@echo $(QUEUE)
+
+vim:
+	@vim -s project/vim_file
+
+# шаблоны компилирования 
+%.o: %.cpp %.h
+	$(CC) $(CFLAGS) -c $< -o $(OBJ_NOW)/$@
+
+%.o: %.cpp
+	$(CC) $(CFLAGS) -c $< -o $(OBJ_NOW)/$@
+
+%.o: %.cu %.h
+	$(CC_CUDA) $(CFLAGSINCLUDE) -arch=sm_20 -c $< -o $(OBJ_NOW)/$@ $(CFLAGSLIB)
+
+%.o: %.cu
+	$(CC_CUDA) $(CFLAGSINCLUDE) -arch=sm_20 -c $< -o $(OBJ_NOW)/$@ $(CFLAGSLIB)
+
+
+# включение файла зависимостей
+ifneq (clean, $(MAKECMDGOALS))
+-include deps.mk
+endif
+
+# файл зависимостей
+deps.mk: $(SRCMODULES)
+	$(CC) $(CFLAGSINCLUDE) $(CFLAGSLIB) -MM $^ > $@
+
+# очистка
+clean:
+	rm -f $(OBJ_NOW)/*.o
+	rm -f $(BIN_NOW)/$(PROG)

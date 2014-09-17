@@ -1,0 +1,5 @@
+:e Makefile_course
+:tabnew Makefile_kov
+:tabnew Makefile
+:tabnew Makefile.skel
+:tabnew config.mk

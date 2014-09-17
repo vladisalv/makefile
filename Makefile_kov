@@ -1,0 +1,212 @@
+# ============================================================================ #
+# Version: 1.0                                                                 #
+# Last update: 08.05.2014                                                      #
+#                                                                              #
+# Makefile для проекта Ковчег                                                  #
+#                                                                              #
+# !!!!!!!!!!!!!!!!!!!!!!! ВАЖНО !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
+#                                                                              #
+#   При первом запуске выйдет ОШИБКА при линковке в окончательный модуль!      #
+#   Это особенность данной версии Makefile. просто соберите проект еще раз!    #
+#                                                                              #
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
+#                                                                              #
+#  если интересно в чем ошибка:                                                #
+# дело в том, что откомпилированные объектные файлы сохраняются не корневой    #
+# каталог, а в папку obj, но утилита make (видимо ее особенность) запоминает   #
+# отсутствие файлов в корневом каталоге и потом ищет их только там (хотя опция #
+# vpath %.o $(OBJ_NOW) стоит задолго до этого). В будущем исправлю             #
+#                                                                              #
+# Что нужно будет сделать:                                                     #
+# 1. Исправить ошибку первого прохода                                          #
+# 2. Написать makefile для BlueGene                                            #
+# 3. Добавить цели:                                                            #
+# 	- test                                                                     #
+# 4. Опции gfortran.
+# 5. Вынесение всей черной работы в отдельный файл                             #
+# 6. Повысить гибкость и понимание                                             #
+#                                                                              #
+# ============================================================================ #
+#                                                                              #
+#                         Версия для: ЛОМОНОСОВА                               #
+#                                                                              #
+# ============================================================================ #
+
+
+# подключение конфигурационного файла
+include config.mk
+
+# инициализация опций
+NUM_PROC       = $(N)
+INDEX_GEOMETRY = $(L)
+NUM_NODE_X     = $(X)
+NUM_NODE_Y     = $(Y)
+NUM_NODE_Z     = $(Z)
+INTER_PRINT    = $(P)
+NUMBER_STEPS   = $(S)
+DELTA          = $(D)
+KAPPA          = $(K)
+CFL            = $(C)
+
+# ==============================================================================
+# опции компилятора
+FFLAGSDEBUG   = -g
+FFLAGSRELEASE = -Werror -Wall -pedantic
+
+# общие опции при любом варианте VERSION
+FFLAGSCOMMON  = -cpp
+ifneq ($(VERSION), "")
+    FFLAGSCOMMON += -DVERSION=\"$(VERSION)\"
+endif
+ifneq ($(VERSION_NUMBER), "")
+    FFLAGSCOMMON += -DVERSION_NUMBER=\"$(VERSION_NUMBER)\"
+endif
+
+#FFLAGSINCLUDE = $(addprefix -I , $(INCLUDE_DIR)) $(addprefix -I , $(OBJ_NOW))
+#FFLAGSLIB     = $(addprefix -L, $(LIB_DIR)) $(addprefix -l, $(LIBMODULES))
+
+ifeq ($(VERSION), DEBUG)
+    FCFLAGS    = $(FFLAGSCOMMON) $(FFLAGSDEBUG) #$(FFLAGSINCLUDE) -J $(OBJ_NOW)
+else ifeq ($(VERSION), RELEASE)
+    FCFLAGS    = $(FFLAGSCOMMON) $(FFLAGSRELEASE) #$(FFLAGSINCLUDE) -J $(OBJ_NOW)
+else
+    FCFLAGS    = $(FFLAGSCOMMON) #$(FFLAGSINCLUDE) -J $(OBJ_NOW)
+endif
+# ==============================================================================
+
+# директории
+#INCLUDE_DIR = include
+#SRC_DIR     = src
+#LIB_DIR     = 
+#CODE_DIR    = $(INCLUDE_DIR) $(SRC_DIR)
+OUTPUT_DIR  = output
+
+# определение всех имен через директории
+#SRCMODULES := $(notdir $(wildcard  $(SRC_DIR)/*.f90))
+#OBJMODULES := $(SRCMODULES:.f90=.o)
+#INCMODULES := $(notdir $(wildcard $(INCLUDE_DIR)/*.h) )
+#LIBMODULES := 
+
+# директория для бинарника
+#BIN         = bin
+#BIN_DEBUG   = $(BIN)/debug
+#BIN_RELEASE = $(BIN)/release
+#ifeq ($(VERSION), DEBUG)
+    #BIN_NOW = $(BIN_DEBUG)
+#else ifeq ($(VERSION), RELEASE)
+    #BIN_NOW = $(BIN_RELEASE)
+#endif
+
+# директория для объектных файлов
+#OBJ         = obj
+#OBJ_DEBUG   = $(OBJ)/debug
+#OBJ_RELEASE = $(OBJ)/release
+#ifeq ($(VERSION), DEBUG)
+    #OBJ_NOW = $(OBJ_DEBUG)
+#else ifeq ($(VERSION), RELEASE)
+    #OBJ_NOW = $(OBJ_RELEASE)
+#endif
+
+# дополнительные параметры для запуска
+DATE        = `date '+%H:%M:%S'`
+ARGUMENTS   = --index-geometry $(INDEX_GEOMETRY) -x $(NUM_NODE_X) -y $(NUM_NODE_Y) -z $(NUM_NODE_Z)
+ARGUMENTS  += --interval-print $(INTER_PRINT) --number-steps $(NUMBER_STEPS) --delta $(DELTA) --kappa $(KAPPA) --cfl $(CFL)
+
+space:=
+space+=
+OUTPUT = $(OUTPUT_DIR)/$(subst $(space),,$(NUM_PROC))-$(DATE)
+# ============== ОПРЕДЕЛЕНИЕ ЦЕЛЕЙ =============================================
+
+# абстрактные цели (выполняются в любом случае)
+.PHONY: print clean all run
+
+# главная цель (пустая команда make)
+all: build
+
+# компиляция
+#build:  $(OBJMODULES) 
+build:
+	@echo Compiling program.....
+	$(FC) $(FCFLAGS) kovcheg.f90 -o ./$(PROG_NAME)
+	@echo Program is compiled.
+
+# запуск
+run:
+	@echo "RUN PROGRAM"
+	@echo -n "YOUR PARAMETRS: "
+	@echo $(ARGUMENTS)
+	@echo -n "NUMBER PROCESS: "
+	@echo $(NUM_PROC)
+	@echo -n "QUEUE: "
+	@echo $(QUEUE)
+	@echo -n "OUPUT FILE: "
+	@echo $(OUTPUT)
+	sbatch -n $(NUM_PROC) -t $(TIME) -p $(QUEUE) -o $(OUTPUT) impi ./$(BIN_NOW)/$(PROG_NAME) $(ARGUMENTS)
+
+# пересобрать
+rebuild: clean build
+
+# очистка от исполняемых данных
+clean:
+	@echo Cleaning...
+	@rm -f $(OBJ_NOW)/*.o
+	@rm -f $(OBJ_NOW)/*.mod
+	@rm -f ./*.mod
+	@rm -f $(BIN_NOW)/$(PROG_NAME)
+	@rm -f deps.mk
+
+# полная очистка. удаление исполняемых файлов и файлов результата
+cleanAll: clean
+	@echo Delete output file
+	@rm -f DATA/*
+	@rm -f $(OUTPUT_DIR)/*
+
+# вывести опции программы
+help:
+	@$(BIN_NOW)/$(PROG_NAME) -h
+	@echo make x2 - compile
+	@echo make run - run program
+	@echo make watch - watch your task ^C for exit
+	@echo make cancel - cancel your task
+
+# отладочная печать 
+print:
+	@echo $(BIN_NOW)
+	@echo $(VERSION)
+	@echo $(FCFLAGS)
+	@echo $(DATE)
+	@echo $(OUTPUT)
+
+# посмотреть свою очередь
+watch:
+	watch -n 1 squeue -u $(USER)
+
+# отменить все поставленные задачи
+cancel:
+	scancel -u $(USER)
+
+# ==============================================================================
+
+# включение файла зависимостей
+#-include deps.mk
+
+# файл зависимостей
+#deps.mk: $(SRCMODULES)
+	#@echo "Create file of dependens..."
+	#@$(FC) $(FFLAGSINCLUDE) -MM $^ > $@
+
+# пути поиска шаблонов
+#vpath %.h   $(INCLUDE_DIR)
+#vpath %.f90 $(SRC_DIR)
+#vpath %.o   $(OBJ_NOW)
+#vpath %.mod $(OBJ_NOW)
+
+# шаблоны компилирования 
+#%.o: %.f90 %.h
+	#$(FC) $(FCFLAGS) -c $<  -o $(OBJ_NOW)/$@
+#%.o: %.f90
+	#$(FC) $(FCFLAGS) -c $<  -o $(OBJ_NOW)/$@
+#%.mod: %.f90 %.h
+	#$(FC) $(FCFLAGS) -c $<  -o $(OBJ_NOW)/$@
+#%.mod: %.f90
+	#$(FC) $(FCFLAGS) -c $<  -o $(OBJ_NOW)/$@

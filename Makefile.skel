@@ -1,0 +1,26 @@
+# определение всех имен через директории
+
+SRC_EXTENSION := cpp cu c
+INC_EXTENSION := h hpp
+OBJ_EXTENSION := o
+
+SRC_MODULES := $(foreach extension, $(SRC_EXTENSION), $(notdir $(wildcard $(SRC_DIR)/*.$(extension))))
+INC_MODULES := $(foreach extension, $(INC_EXTENSION), $(notdir $(wildcard $(INC_DIR)/*.$(extension))))
+
+OBJ_MODULES := $(foreach extension, $(SRC_EXTENSION), $(patsubst %.$(extension), %.$(OBJ_EXTENSION), $(filter %.$(extension), $(SRC_MODULES))))
+
+LIB_MODULES := $(LIBRARY)
+
+
+TARGET := debug release
+TARGET_NOW := debug
+
+BIN        := bin
+BIN_TARGET := $(foreach target, $(TARGET), $(BIN)/$(target))
+BIN_NOW    := $(filter %$(TARGET_NOW), $(BIN_TARGET))
+
+OBJ         = obj
+OBJ_TARGET := $(foreach target, $(TARGET), $(OBJ)/$(target))
+OBJ_NOW    := $(filter %$(TARGET_NOW), $(OBJ_TARGET))
+
+
