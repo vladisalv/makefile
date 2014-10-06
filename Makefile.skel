@@ -24,3 +24,69 @@ OBJ_TARGET := $(foreach target, $(TARGET), $(OBJ)/$(target))
 OBJ_NOW    := $(filter %$(TARGET_NOW), $(OBJ_TARGET))
 
 
+CODE_DIR    := $(INCLUDE_DIR) $(SRC_DIR)
+
+
+DATE        = `date '+%H:%M:%S'`
+
+
+# включение файла зависимостей
+#-include deps.mk
+
+# файл зависимостей
+#deps.mk: $(SRCMODULES)
+	#@echo "Create file of dependens..."
+	#@$(FC) $(FFLAGSINCLUDE) -MM $^ > $@
+
+# пути поиска шаблонов
+#vpath %.h   $(INCLUDE_DIR)
+#vpath %.f90 $(SRC_DIR)
+#vpath %.o   $(OBJ_NOW)
+#vpath %.mod $(OBJ_NOW)
+
+# шаблоны компилирования 
+#%.o: %.f90 %.h
+	#$(FC) $(FCFLAGS) -c $<  -o $(OBJ_NOW)/$@
+#%.o: %.f90
+	#$(FC) $(FCFLAGS) -c $<  -o $(OBJ_NOW)/$@
+#%.mod: %.f90 %.h
+	#$(FC) $(FCFLAGS) -c $<  -o $(OBJ_NOW)/$@
+#%.mod: %.f90
+	#$(FC) $(FCFLAGS) -c $<  -o $(OBJ_NOW)/$@
+
+
+# компиляторы
+CC            = mpicxx
+CC_CUDA       = nvcc
+CFLAGSDEBUG   = -g -Wall -pedantic #-Werror
+CFLAGSRELEASE =
+CFLAGSINCLUDE = $(addprefix -I, $(INCLUDE_DIR))
+CFLAGSLIB     = $(addprefix -L, $(LIB_DIR)) $(addprefix -l, $(LIBMODULES))
+CFLAGS        = $(CFLAGSDEBUG) $(CFLAGSINCLUDE) $(CFLAGSLIB) -openmp
+CFLAGS_CUDA   = $(CFLAGSINCLUDE) $(CFLAGSLIB)
+
+
+# опции компилятора
+FFLAGSDEBUG   = -g
+FFLAGSRELEASE = -Werror -Wall -pedantic
+
+# общие опции при любом варианте VERSION
+FFLAGSCOMMON  = -cpp
+ifneq ($(VERSION), "")
+    FFLAGSCOMMON += -DVERSION=\"$(VERSION)\"
+endif
+ifneq ($(VERSION_NUMBER), "")
+    FFLAGSCOMMON += -DVERSION_NUMBER=\"$(VERSION_NUMBER)\"
+endif
+
+#FFLAGSINCLUDE = $(addprefix -I , $(INCLUDE_DIR)) $(addprefix -I , $(OBJ_NOW))
+#FFLAGSLIB     = $(addprefix -L, $(LIB_DIR)) $(addprefix -l, $(LIBMODULES))
+
+ifeq ($(VERSION), DEBUG)
+    FCFLAGS    = $(FFLAGSCOMMON) $(FFLAGSDEBUG) #$(FFLAGSINCLUDE) -J $(OBJ_NOW)
+else ifeq ($(VERSION), RELEASE)
+    FCFLAGS    = $(FFLAGSCOMMON) $(FFLAGSRELEASE) #$(FFLAGSINCLUDE) -J $(OBJ_NOW)
+else
+    FCFLAGS    = $(FFLAGSCOMMON) #$(FFLAGSINCLUDE) -J $(OBJ_NOW)
+endif
+#
