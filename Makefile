@@ -1,6 +1,6 @@
 # ============================================================================ #
 # Version: 3.0                                                                 #
-# Last update: 05.10.2014                                                      #
+# Last update: 12.10.2014                                                      #
 #                                                                              #
 #                                                                              #
 # !!!!!!!!!!!!!!!!!!!!!!! ВАЖНО !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
@@ -18,89 +18,80 @@
 #                                                                              #
 # Что нужно будет сделать:                                                     #
 # 1. Исправить ошибку первого прохода                                          #
-# ============================================================================ ##structure:
+# ============================================================================ #
+
+# structure:
 # name in config
 # name in Makefile (redifinition config)
 # name in Makefile.sqel (redifinition Makefile, template)
 # goals
 
-
-
+# ====================  INCLUDE CONFIG FILE  ===================================
 
 include $(wildcard config.mk)
 
+# ========================  REDEFINE NAME  =====================================
+PROGRAM_NAME ?= "PROGRAM"
+VERSION_NUMBER ?= "UNKNOW"
+# ----------------------  INPUT/OUTPUT FILES  ----------------------------------
+INPUT_DIR   ?= input
+INPUT_FILE  ?= input_$(DATE)
+OUTPUT_DIR  ?= output
+OUTPUT_FILE ?= output_$(DATE)
+# ----------------------  LAUNCH OPTIONS  --------------------------------------
+ARGUMENTS ?= -h
+MACHINE ?= host
+NODE ?=
+NUMBER_PROC ?= 1
+QUEUE ?=
+TIME ?=
+# ========================  DEFINE NAME  =======================================
+BIN_NAME ?= $(PROGRAM_NAME)
 
+TARGET ?= debug release
+TARGET_NOW ?= debug
+# -----------------------  CODE DIRECTORY  -------------------------------------
+INCLUDE_DIR ?= include
+SRC_DIR ?= src
+LIB_DIR ?=
+LIBRARY ?=
+# ----------------------------  FLAGS  -----------------------------------------
 
+# FLAGS := $(FLAGSCOMMON) $(FLAGSGOAL) $(FLAGSINCLUDES) $(FLAGLIBS) 
 
-
-
-ifndef INCLUDE_DIR
-    INCLUDE_DIR := include
-endif
-
-SRC_DIR     := src
-LIB_DIR     := 
-
-LIBRARY = cublas cudart
-
-OUTPUT_DIR
-OUTPUT_FILE
-
-INPUT_DIR
-INPUT_FILE
-
-
-# дополнительные параметры для запуска
-ARGUMENTS   = --index-geometry $(INDEX_GEOMETRY) -x $(NUM_NODE_X) -y $(NUM_NODE_Y) -z $(NUM_NODE_Z)
-ARGUMENTS  += --interval-print $(INTER_PRINT) --number-steps $(NUMBER_STEPS) --delta $(DELTA) --kappa $(KAPPA) --cfl $(CFL)
-NODE        = 1
-NUMBER_PROC = 8
-QUEUE       = test
-TIME        = 15:00
-
-
-
+# ====================  INCLUDE SKELETON FILE  =================================
 
 include $(wildcard Makefile.skel)
 
-
-
-
-# ============== GOALS =========================================================
+# =============================  GOALS  ========================================
 
 # абстрактные цели (выполняются в любом случае)
-.PHONY: print clean all run
+.PHONY: all run clean clean_exec clean_result
 
 # главная цель (пустая команда make)
+all: build
 
-all: print
-
-print:
-	@echo "INCLUDE_DIR = $(INCLUDE_DIR)"
-
-build:
+build: $(OBJ_MODULES)
 	@echo Compiling program.....
-
-# пересобрать
-rebuild: clean build
+	@$(CC) $(CFLAGS) $^ -o $(BIN_NOW)/$(BINARY_NAME) # $(CFLAGSLIB) в конце
 
 # запуск
 run:
 	@echo "RUN PROGRAM"
 
-# очистка от исполняемых данных
-clean:
+rebuild: clean_exec build
+
+clean: clean_exec clean_result
+
+clean_exec:
 	@echo Cleaning...
 
-# полная очистка. удаление исполняемых файлов и файлов результата
-cleanAll: clean
-	@echo Delete output file
-	@rm -f DATA/*
-	@rm -f $(OUTPUT_DIR)/*
+clean_result:
+	@echo Cleaning...
 
 # вывести опции программы
-help:
-	@$(BIN_NOW)/$(PROG_NAME) -h
+option:
+	@$(BIN_NOW)/$(BINARY_NAME) -h
 
 # посмотреть свою очередь
 watch:
@@ -109,7 +100,9 @@ watch:
 # отменить все поставленные задачи
 cancel:
 	scancel -u $(USER)
-vim:
-	@vim -s vim_file
 
 test:
+
+begin:
+
+finish:
